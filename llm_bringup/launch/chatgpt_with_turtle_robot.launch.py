@@ -36,21 +36,9 @@ def generate_launch_description():
     return LaunchDescription(
         [
             Node(
-                package="llm_input",
-                executable="llm_audio_input",
-                name="llm_audio_input",
-                output="screen",
-            ),
-            Node(
                 package="llm_model",
                 executable="chatgpt",
                 name="chatgpt",
-                output="screen",
-            ),
-            Node(
-                package="llm_output",
-                executable="llm_audio_output",
-                name="llm_audio_output",
                 output="screen",
             ),
             Node(

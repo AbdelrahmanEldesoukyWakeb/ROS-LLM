@@ -44,15 +44,12 @@ from std_msgs.msg import String
 import json
 import os
 import time
-import openai
+from openai import OpenAI
 from llm_config.user_config import UserConfig
-
 
 # Global Initialization
 config = UserConfig()
-openai.api_key = config.openai_api_key
-# openai.organization = config.openai_organization
-
+client = OpenAI(api_key=config.openai_api_key)
 
 class ChatGPTNode(Node):
     def __init__(self):
@@ -178,20 +175,10 @@ class ChatGPTNode(Node):
         """
         # Log
         self.get_logger().info(f"Sending messages to OpenAI: {messages_input}")
-        response = openai.ChatCompletion.create(
-            model=config.openai_model,
-            messages=messages_input,
-            functions=config.robot_functions_list,
-            function_call="auto",
-            # temperature=config.openai_temperature,
-            # top_p=config.openai_top_p,
-            # n=config.openai_n,
-            # stream=config.openai_stream,
-            # stop=config.openai_stop,
-            # max_tokens=config.openai_max_tokens,
-            # presence_penalty=config.openai_presence_penalty,
-            # frequency_penalty=config.openai_frequency_penalty,
-        )
+        response = client.chat.completions.create(model=config.openai_model,
+        messages=messages_input,
+        functions=config.robot_functions_list,
+        function_call="auto")
         # Log
         self.get_logger().info(f"OpenAI response: {response}")
         return response
@@ -202,10 +189,14 @@ class ChatGPTNode(Node):
         The response information includes the message, text, function call, and function flag.
         function_flag = 0: no function call, 1: function call
         """
-        # Getting response information
-        message = chatgpt_response["choices"][0]["message"]
-        content = message.get("content")
-        function_call = message.get("function_call", None)
+
+        # Accessing the first choice's message
+        first_choice = chatgpt_response.choices[0]
+        message = first_choice.message
+        content = first_choice.message.content
+        function_call = first_choice.message.function_call
+
+        #print(chatgpt_response)
 
         # Initializing function flag, 0: no function call, 1: function call
         function_flag = 0
@@ -237,7 +228,7 @@ class ChatGPTNode(Node):
         """
         try:
             # Converting chat history to JSON string
-            json_data = json.dumps(config.chat_history)
+            json_data = json.dumps(config.chat_history, default=lambda o: o.__dict__, indent=2)
 
             # Writing JSON to file
             with open(self.chat_history_file, "w", encoding="utf-8") as file:
@@ -257,9 +248,9 @@ class ChatGPTNode(Node):
         When the response is received, the function call response callback is called.
         """
         # JSON object to string
-        function_call_input_str = json.dumps(function_call_input)
+        function_call_input_str = json.dumps(function_call_input, default=lambda o: o.__dict__, indent=2)
         # Get function name
-        self.function_name = function_call_input["name"]
+        self.function_name = function_call_input.name
         # Send function call request
         self.function_call_requst.request_text = function_call_input_str
         self.get_logger().info(
@@ -340,7 +331,6 @@ class ChatGPTNode(Node):
             self.get_logger().info("STATE: feedback_for_user")
             self.publish_string(llm_response_type, self.llm_response_type_publisher)
             self.publish_string(text, self.llm_feedback_publisher)
-            # self.publish_string(json.dumps(text), self.llm_feedback_publisher)
 
 
 def main(args=None):

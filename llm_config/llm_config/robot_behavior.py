@@ -225,7 +225,7 @@ class RobotBehavior:
     """
 
     def __init__(self):
-        self.robot_functions_list = robot_functions_list_multi_robot
+        self.robot_functions_list = robot_functions_list_1
 
 
 if __name__ == "__main__":
